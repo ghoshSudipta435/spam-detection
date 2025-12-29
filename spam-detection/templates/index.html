@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Spam Detection App</title>
+</head>
+<body style="text-align:center; margin-top:50px;">
+    <h2>SMS Spam Detection</h2>
+
+    <form method="POST" action="/">
+        <textarea name="message" rows="5" cols="50"
+                  placeholder="Enter message here..." required></textarea>
+        <br><br>
+        <button type="submit">Predict</button>
+    </form>
+
+    {% if prediction %}
+        <h3>{{ prediction }}</h3>
+    {% endif %}
+</body>
+</html>
