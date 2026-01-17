@@ -1,20 +1,339 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spam Detection App</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --spam-color: #dc3545;
+            --ham-color: #28a745;
+            --primary-color: #0d6efd;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .main-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border: none;
+        }
+        
+        .form-control, .form-control:focus {
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+            padding: 0.75rem;
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5568d3 0%, #6a4190 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn-secondary {
+            border-radius: 10px;
+            padding: 0.75rem 2rem;
+        }
+        
+        .alert-spam {
+            background-color: #f8d7da;
+            border-color: var(--spam-color);
+            color: #721c24;
+            border-radius: 10px;
+            border-left: 5px solid var(--spam-color);
+        }
+        
+        .alert-ham {
+            background-color: #d4edda;
+            border-color: var(--ham-color);
+            color: #155724;
+            border-radius: 10px;
+            border-left: 5px solid var(--ham-color);
+        }
+        
+        .spinner-border {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+        
+        .character-counter {
+            font-size: 0.875rem;
+            color: #6c757d;
+            text-align: right;
+            margin-top: 0.25rem;
+        }
+        
+        .character-counter.warning {
+            color: #ffc107;
+        }
+        
+        .character-counter.danger {
+            color: var(--spam-color);
+        }
+        
+        .history-item {
+            border-left: 4px solid #e0e0e0;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        
+        .history-item:hover {
+            background-color: #e9ecef;
+            transform: translateX(5px);
+        }
+        
+        .history-item.spam {
+            border-left-color: var(--spam-color);
+        }
+        
+        .history-item.ham {
+            border-left-color: var(--ham-color);
+        }
+        
+        .confidence-badge {
+            font-size: 0.875rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+        
+        .confidence-badge.high {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .confidence-badge.medium {
+            background-color: #ffc107;
+            color: #000;
+        }
+        
+        .confidence-badge.low {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                margin: 1rem;
+                padding: 1rem;
+            }
+            
+            .btn-group {
+                width: 100%;
+            }
+            
+            .btn-group .btn {
+                flex: 1;
+            }
+        }
+    </style>
 </head>
-<body style="text-align:center; margin-top:50px;">
-    <h2>SMS Spam Detection</h2>
-
-    <form method="POST" action="/">
-        <textarea name="message" rows="5" cols="50"
-                  placeholder="Enter message here..." required></textarea>
-        <br><br>
-        <button type="submit">Predict</button>
+<body>
+    <div class="main-container">
+        <div class="card">
+            <div class="card-header text-center">
+                <h1 class="mb-0">
+                    <i class="bi bi-shield-check"></i> SMS Spam Detection
+                </h1>
+                <p class="mb-0 mt-2" style="opacity: 0.9;">AI-Powered Message Classifier</p>
+            </div>
+            
+            <div class="card-body p-4">
+                <!-- Prediction Result Alert -->
+                {% if prediction %}
+                <div class="alert {% if prediction.is_spam %}alert-spam{% else %}alert-ham{% endif %} alert-dismissible fade show" role="alert">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h5 class="alert-heading mb-1">
+                                <i class="bi {% if prediction.is_spam %}bi-exclamation-triangle{% else %}bi-check-circle{% endif %}"></i>
+                                {% if prediction.is_spam %}Spam Detected{% else %}Not Spam{% endif %}
+                            </h5>
+                            <p class="mb-0">
+                                Confidence: <span class="confidence-badge {% if prediction.confidence >= 90 %}high{% elif prediction.confidence >= 70 %}medium{% else %}low{% endif %}">
+                                    {{ prediction.confidence }}%
+                                </span>
+                            </p>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Main Form -->
+                <form method="POST" action="/" id="predictionForm" aria-label="Spam detection form">
+                    <div class="mb-3">
+                        <label for="message" class="form-label fw-bold">
+                            <i class="bi bi-chat-text"></i> Enter your message
+                        </label>
+                        <textarea 
+                            class="form-control" 
+                            id="message" 
+                            name="message" 
+                            rows="6" 
+                            placeholder="Enter your SMS message here to check if it's spam..."
+                            required
+                            maxlength="500"
+                            aria-describedby="messageHelp characterCounter"
+                            autocomplete="off"></textarea>
+                        <div id="characterCounter" class="character-counter">
+                            <span id="charCount">0</span> / 500 characters
+                        </div>
+                        <div id="messageHelp" class="form-text">
+                            The message will be analyzed using our machine learning model.
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-4">
+                        <button type="button" class="btn btn-secondary" id="clearBtn" aria-label="Clear message">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="submitBtn" aria-label="Predict spam">
+                            <span id="submitText">
+                                <i class="bi bi-search"></i> Predict
+                            </span>
+                            <span id="loadingSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        </button>
+                    </div>
     </form>
 
-    {% if prediction %}
-        <h3>{{ prediction }}</h3>
+                <!-- Message History -->
+                {% if history and history|length > 0 %}
+                <div class="mt-4">
+                    <h5 class="mb-3">
+                        <i class="bi bi-clock-history"></i> Recent Predictions
+                        <small class="text-muted">({{ history|length }} result{{ 's' if history|length != 1 else '' }})</small>
+                    </h5>
+                    <div class="history-list">
+                        {% for item in history %}
+                        <div class="history-item {% if item.is_spam %}spam{% else %}ham{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <p class="mb-1 fw-bold">
+                                        <i class="bi {% if item.is_spam %}bi-exclamation-triangle-fill text-danger{% else %}bi-check-circle-fill text-success{% endif %}"></i>
+                                        {% if item.is_spam %}Spam{% else %}Not Spam{% endif %}
+                                    </p>
+                                    <p class="mb-1 text-muted small">{{ item.message }}</p>
+                                    <small class="text-muted">
+                                        <i class="bi bi-clock"></i> {{ item.timestamp }}
+                                    </small>
+                                </div>
+                                <span class="confidence-badge ms-2 {% if item.confidence >= 90 %}high{% elif item.confidence >= 70 %}medium{% else %}low{% endif %}">
+                                    {{ item.confidence }}%
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
     {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Character Counter
+        const messageTextarea = document.getElementById('message');
+        const charCount = document.getElementById('charCount');
+        const characterCounter = document.getElementById('characterCounter');
+        const maxLength = 500;
+        
+        messageTextarea.addEventListener('input', function() {
+            const currentLength = this.value.length;
+            charCount.textContent = currentLength;
+            
+            // Update color based on character count
+            characterCounter.classList.remove('warning', 'danger');
+            if (currentLength > maxLength * 0.9) {
+                characterCounter.classList.add('danger');
+            } else if (currentLength > maxLength * 0.75) {
+                characterCounter.classList.add('warning');
+            }
+        });
+        
+        // Clear Button
+        const clearBtn = document.getElementById('clearBtn');
+        const form = document.getElementById('predictionForm');
+        
+        clearBtn.addEventListener('click', function() {
+            messageTextarea.value = '';
+            charCount.textContent = '0';
+            characterCounter.classList.remove('warning', 'danger');
+            messageTextarea.focus();
+        });
+        
+        // Loading Spinner
+        const submitBtn = document.getElementById('submitBtn');
+        const submitText = document.getElementById('submitText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        
+        form.addEventListener('submit', function() {
+            submitBtn.disabled = true;
+            submitText.classList.add('d-none');
+            loadingSpinner.classList.remove('d-none');
+        });
+        
+        // Auto-focus on textarea when page loads
+        window.addEventListener('load', function() {
+            messageTextarea.focus();
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + Enter to submit
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                if (!submitBtn.disabled) {
+                    form.submit();
+                }
+            }
+            // Escape to clear
+            if (e.key === 'Escape' && document.activeElement === messageTextarea) {
+                clearBtn.click();
+            }
+        });
+    </script>
 </body>
 </html>

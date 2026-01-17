@@ -10,3 +10,9 @@ __pycache__/
 
 # Mac
 .DS_Store
+
+# Environment variables
+.env
+
+# Note: Model files (*.pkl) are included in git for deployment purposes
+# If files become too large, consider using Git LFS or storing in cloud storage

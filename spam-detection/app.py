@@ -1,20 +1,36 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session
 import pickle
 import string
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
+from datetime import datetime
 
-nltk.download('stopwords')
+nltk.download('stopwords', quiet=True)
 
 app = Flask(__name__)
+app.secret_key = 'your-secret-key-change-in-production'  # Change this in production
 
 # Load model and vectorizer
-with open("spam_model.pkl", "rb") as model_file:
-    model = pickle.load(model_file)
+try:
+    with open("spam_model.pkl", "rb") as model_file:
+        model = pickle.load(model_file)
+except FileNotFoundError:
+    print("Error: spam_model.pkl not found. Please ensure the model file is in the same directory as app.py")
+    raise
+except Exception as e:
+    print(f"Error loading model: {e}")
+    raise
 
-with open("tfidf_vectorizer.pkl", "rb") as vectorizer_file:
-    vectorizer = pickle.load(vectorizer_file)
+try:
+    with open("tfidf_vectorizer.pkl", "rb") as vectorizer_file:
+        vectorizer = pickle.load(vectorizer_file)
+except FileNotFoundError:
+    print("Error: tfidf_vectorizer.pkl not found. Please ensure the vectorizer file is in the same directory as app.py")
+    raise
+except Exception as e:
+    print(f"Error loading vectorizer: {e}")
+    raise
 
 # Text preprocessing
 stop_words = set(stopwords.words('english'))
@@ -32,15 +48,43 @@ def preprocess_text(text):
 
 @app.route("/", methods=["GET", "POST"])
 def home():
-    prediction = ""
+    # Initialize message history in session if not exists
+    history = session.get('history', [])
+    
+    prediction_result = None
+    
     if request.method == "POST":
-        message = request.form["message"]
-        print("User input:", message)   # 👈 debug
-        cleaned_message = preprocess_text(message)
-        vectorized_message = vectorizer.transform([cleaned_message])
-        result = model.predict(vectorized_message)[0]
-        prediction = "Spam 🚫" if result == 1 else "Not Spam ✅"
-    return render_template("index.html", prediction=prediction)
+        message = request.form.get("message", "").strip()
+        
+        if message:
+            cleaned_message = preprocess_text(message)
+            vectorized_message = vectorizer.transform([cleaned_message])
+            
+            # Get prediction and probability
+            result = model.predict(vectorized_message)[0]
+            probabilities = model.predict_proba(vectorized_message)[0]
+            
+            # Calculate confidence (probability of predicted class)
+            confidence = probabilities[result] * 100
+            is_spam = bool(result == 1)
+            
+            # Create prediction result dictionary (all values must be JSON serializable)
+            prediction_result = {
+                'message': message[:100] + "..." if len(message) > 100 else message,  # Truncate for display
+                'full_message': message,
+                'is_spam': is_spam,
+                'confidence': float(round(confidence, 2)),
+                'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            
+            # Add to session history (keep last 10 predictions)
+            history = [prediction_result] + history
+            history = history[:10]
+            session['history'] = history
+    
+    return render_template("index.html", 
+                         prediction=prediction_result,
+                         history=history)
 
 if __name__ == "__main__":
     app.run(debug=True)
