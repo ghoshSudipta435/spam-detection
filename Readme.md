@@ -3,7 +3,7 @@
 **University:** Jadavpur University  
 **Year:** 2025 
 **LinkedIn:** (https://www.linkedin.com/in/sudipta-ghosh-a9646b230/)
-** Project Link ** (https://spam-detection-j5ht.onrender.com)
+**ProjectLink** (https://spam-detection-j5ht.onrender.com)
 
 # 📩 SMS Spam Detection using Machine Learning
 
