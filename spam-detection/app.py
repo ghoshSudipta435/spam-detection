@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, session
 import pickle
 import string
+import os
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
@@ -87,4 +88,5 @@ def home():
                          history=history)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
